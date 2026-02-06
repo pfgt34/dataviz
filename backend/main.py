@@ -4,40 +4,51 @@ API FastAPI pour l'analyse du dataset Superstore
 📊 Tous les KPI e-commerce implémentés
 """
 
+# ============================================================================
+# IMPORTS
+# ============================================================================
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional, List, Dict, Any
+from typing import Optional
 from datetime import datetime
 import pandas as pd
 from pydantic import BaseModel
 import logging
 
-# Configuration du logger pour faciliter le débogage
+# ============================================================================
+# CONFIGURATION LOGGER
+# ============================================================================
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialisation de l'application FastAPI
+# ============================================================================
+# CONSTANTES
+# ============================================================================
+DATASET_URL = "https://raw.githubusercontent.com/leonism/sample-superstore/master/data/superstore.csv"
+
+# ============================================================================
+# INITIALISATION FASTAPI
+# ============================================================================
 app = FastAPI(
     title="Superstore BI API",
     description="API d'analyse Business Intelligence pour le dataset Superstore",
     version="1.0.0",
-    docs_url="/docs",  # Documentation Swagger accessible via /docs
-    redoc_url="/redoc"  # Documentation ReDoc accessible via /redoc
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
-# Configuration CORS pour permettre les appels depuis Streamlit
+# Configuration CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En production, spécifier l'URL exacte de Streamlit
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# === CHARGEMENT DES DONNÉES ===
-
-# URL du dataset Superstore sur GitHub
-DATASET_URL = "https://raw.githubusercontent.com/leonism/sample-superstore/master/data/superstore.csv"
+# ============================================================================
+# CHARGEMENT DES DONNÉES
+# ============================================================================
 
 def load_data() -> pd.DataFrame:
     """
@@ -50,17 +61,10 @@ def load_data() -> pd.DataFrame:
     try:
         logger.info(f"Chargement du dataset depuis {DATASET_URL}")
         
-        # Lecture du CSV
         df = pd.read_csv(DATASET_URL, encoding='latin-1')
-        
-        # Nettoyage des noms de colonnes (suppression espaces)
         df.columns = df.columns.str.strip()
-        
-        # Conversion des dates au format datetime
         df['Order Date'] = pd.to_datetime(df['Order Date'])
         df['Ship Date'] = pd.to_datetime(df['Ship Date'])
-        
-        # Suppression des lignes avec valeurs manquantes critiques
         df = df.dropna(subset=['Order ID', 'Customer ID', 'Sales'])
         
         logger.info(f"✅ Dataset chargé : {len(df)} commandes")
@@ -70,13 +74,16 @@ def load_data() -> pd.DataFrame:
         logger.error(f"❌ Erreur lors du chargement des données : {e}")
         raise HTTPException(status_code=500, detail=f"Erreur de chargement : {str(e)}")
 
-# Chargement des données au démarrage de l'application
+
+# Chargement au démarrage
 df = load_data()
 
-# === MODÈLES PYDANTIC (pour la validation des réponses) ===
+# ============================================================================
+# MODÈLES PYDANTIC (Validation des réponses)
+# ============================================================================
 
 class KPIGlobaux(BaseModel):
-    """Modèle pour les KPI globaux"""
+    """KPI globaux"""
     ca_total: float
     nb_commandes: int
     nb_clients: int
@@ -85,23 +92,27 @@ class KPIGlobaux(BaseModel):
     profit_total: float
     marge_moyenne: float
 
+
 class ProduitTop(BaseModel):
-    """Modèle pour les produits top performers"""
+    """Produits top performers"""
     produit: str
     categorie: str
     ca: float
     quantite: int
     profit: float
 
+
 class CategoriePerf(BaseModel):
-    """Modèle pour la performance par catégorie"""
+    """Performance par catégorie"""
     categorie: str
     ca: float
     profit: float
     nb_commandes: int
     marge_pct: float
 
-# === FONCTIONS UTILITAIRES ===
+# ============================================================================
+# FONCTIONS UTILITAIRES
+# ============================================================================
 
 def filtrer_dataframe(
     df: pd.DataFrame,
@@ -127,33 +138,26 @@ def filtrer_dataframe(
     """
     df_filtered = df.copy()
     
-    # Filtre par date
     if date_debut:
         df_filtered = df_filtered[df_filtered['Order Date'] >= date_debut]
     if date_fin:
         df_filtered = df_filtered[df_filtered['Order Date'] <= date_fin]
-    
-    # Filtre par catégorie
     if categorie and categorie != "Toutes":
         df_filtered = df_filtered[df_filtered['Category'] == categorie]
-    
-    # Filtre par région
     if region and region != "Toutes":
         df_filtered = df_filtered[df_filtered['Region'] == region]
-    
-    # Filtre par segment
     if segment and segment != "Tous":
         df_filtered = df_filtered[df_filtered['Segment'] == segment]
     
     return df_filtered
 
-# === ENDPOINTS API ===
+# ============================================================================
+# ENDPOINTS - INFORMATION
+# ============================================================================
 
 @app.get("/", tags=["Info"])
 def root():
-    """
-    Endpoint racine - Informations sur l'API
-    """
+    """Endpoint racine - Informations sur l'API"""
     return {
         "message": "🛒 API Superstore BI",
         "version": "1.0.0",
@@ -174,6 +178,11 @@ def root():
         }
     }
 
+
+# ============================================================================
+# ENDPOINTS - KPI PRINCIPAUX
+# ============================================================================
+
 @app.get("/kpi/globaux", response_model=KPIGlobaux, tags=["KPI"])
 def get_kpi_globaux(
     date_debut: Optional[str] = Query(None, description="Date début (YYYY-MM-DD)"),
@@ -184,20 +193,10 @@ def get_kpi_globaux(
 ):
     """
     📊 KPI GLOBAUX
-    
-    Calcule les indicateurs clés globaux :
-    - Chiffre d'affaires total
-    - Nombre de commandes
-    - Nombre de clients uniques
-    - Panier moyen
-    - Quantité totale vendue
-    - Profit total
-    - Marge moyenne (%)
+    Calcule tous les indicateurs clés de performance
     """
-    # Application des filtres
     df_filtered = filtrer_dataframe(df, date_debut, date_fin, categorie, region, segment)
     
-    # Calcul des KPI
     ca_total = df_filtered['Sales'].sum()
     nb_commandes = df_filtered['Order ID'].nunique()
     nb_clients = df_filtered['Customer ID'].nunique()
@@ -216,40 +215,27 @@ def get_kpi_globaux(
         marge_moyenne=round(marge_moyenne, 2)
     )
 
+
 @app.get("/kpi/produits/top", tags=["KPI"])
 def get_top_produits(
-    limite: int = Query(10, ge=1, le=50, description="Nombre de produits à retourner"),
+    limite: int = Query(10, ge=1, le=50, description="Nombre de produits"),
     tri_par: str = Query("ca", regex="^(ca|profit|quantite)$", description="Critère de tri")
 ):
     """
     🏆 TOP PRODUITS
-    
-    Retourne les meilleurs produits selon le critère choisi :
-    - ca : Chiffre d'affaires
-    - profit : Profit
-    - quantite : Quantité vendue
+    Retourne les meilleurs produits (ca, profit ou quantite)
     """
-    # Agrégation par produit
     produits = df.groupby(['Product Name', 'Category']).agg({
         'Sales': 'sum',
         'Quantity': 'sum',
         'Profit': 'sum'
     }).reset_index()
     
-    # Tri selon le critère
-    if tri_par == "ca":
-        produits = produits.sort_values('Sales', ascending=False)
-    elif tri_par == "profit":
-        produits = produits.sort_values('Profit', ascending=False)
-    else:  # quantite
-        produits = produits.sort_values('Quantity', ascending=False)
+    colonne_tri = {'ca': 'Sales', 'profit': 'Profit', 'quantite': 'Quantity'}[tri_par]
+    produits = produits.sort_values(colonne_tri, ascending=False).head(limite)
     
-    # Sélection du top
-    top = produits.head(limite)
-    
-    # Formatage de la réponse
     result = []
-    for _, row in top.iterrows():
+    for _, row in produits.iterrows():
         result.append({
             "produit": row['Product Name'],
             "categorie": row['Category'],
@@ -260,56 +246,39 @@ def get_top_produits(
     
     return result
 
+
 @app.get("/kpi/categories", tags=["KPI"])
 def get_performance_categories():
     """
     📦 PERFORMANCE PAR CATÉGORIE
-    
-    Analyse la performance de chaque catégorie :
-    - CA total
-    - Profit
-    - Nombre de commandes
-    - Marge (%)
+    Analyse complète par catégorie de produits
     """
-    # Agrégation par catégorie
     categories = df.groupby('Category').agg({
         'Sales': 'sum',
         'Profit': 'sum',
         'Order ID': 'nunique'
     }).reset_index()
     
-    # Calcul de la marge
     categories['marge_pct'] = (categories['Profit'] / categories['Sales'] * 100).round(2)
-    
-    # Renommage des colonnes
     categories.columns = ['categorie', 'ca', 'profit', 'nb_commandes', 'marge_pct']
-    
-    # Tri par CA décroissant
     categories = categories.sort_values('ca', ascending=False)
     
     return categories.to_dict('records')
 
+
 @app.get("/kpi/temporel", tags=["KPI"])
 def get_evolution_temporelle(
-    periode: str = Query('mois', regex='^(jour|mois|annee)$', description="Granularité temporelle")
+    periode: str = Query('mois', regex='^(jour|mois|annee)$', description="Granularité")
 ):
     """
     📈 ÉVOLUTION TEMPORELLE
-    
-    Analyse l'évolution du CA, profit et commandes dans le temps
-    Granularités disponibles : jour, mois, annee
+    Analyse dans le temps (jour, mois ou année)
     """
     df_temp = df.copy()
     
-    # Création de la colonne période selon la granularité
-    if periode == 'jour':
-        df_temp['periode'] = df_temp['Order Date'].dt.strftime('%Y-%m-%d')
-    elif periode == 'mois':
-        df_temp['periode'] = df_temp['Order Date'].dt.strftime('%Y-%m')
-    else:  # annee
-        df_temp['periode'] = df_temp['Order Date'].dt.strftime('%Y')
+    format_date = {'jour': '%Y-%m-%d', 'mois': '%Y-%m', 'annee': '%Y'}[periode]
+    df_temp['periode'] = df_temp['Order Date'].dt.strftime(format_date)
     
-    # Agrégation
     temporal = df_temp.groupby('periode').agg({
         'Sales': 'sum',
         'Profit': 'sum',
@@ -318,22 +287,16 @@ def get_evolution_temporelle(
     }).reset_index()
     
     temporal.columns = ['periode', 'ca', 'profit', 'nb_commandes', 'quantite']
-    
-    # Tri chronologique
     temporal = temporal.sort_values('periode')
     
     return temporal.to_dict('records')
+
 
 @app.get("/kpi/geographique", tags=["KPI"])
 def get_performance_geographique():
     """
     🌍 PERFORMANCE GÉOGRAPHIQUE
-    
-    Analyse la performance par région :
-    - CA par région
-    - Profit par région
-    - Nombre de clients
-    - Nombre de commandes
+    Analyse par région
     """
     geo = df.groupby('Region').agg({
         'Sales': 'sum',
@@ -347,19 +310,15 @@ def get_performance_geographique():
     
     return geo.to_dict('records')
 
+
 @app.get("/kpi/clients", tags=["KPI"])
 def get_analyse_clients(
     limite: int = Query(10, ge=1, le=100, description="Nombre de top clients")
 ):
     """
     👥 ANALYSE CLIENTS
-    
-    Retourne :
-    - Top clients par CA
-    - Statistiques de récurrence
-    - Analyse par segment
+    Top clients, récurrence et segmentation
     """
-    # Top clients
     clients = df.groupby('Customer ID').agg({
         'Sales': 'sum',
         'Profit': 'sum',
@@ -369,10 +328,8 @@ def get_analyse_clients(
     
     clients.columns = ['customer_id', 'ca_total', 'profit_total', 'nb_commandes', 'nom']
     clients['valeur_commande_moy'] = (clients['ca_total'] / clients['nb_commandes']).round(2)
-    
     top_clients = clients.sort_values('ca_total', ascending=False).head(limite)
     
-    # Statistiques de récurrence
     recurrence = {
         "clients_1_achat": len(clients[clients['nb_commandes'] == 1]),
         "clients_recurrents": len(clients[clients['nb_commandes'] > 1]),
@@ -380,7 +337,6 @@ def get_analyse_clients(
         "total_clients": len(clients)
     }
     
-    # Analyse par segment
     segments = df.groupby('Segment').agg({
         'Sales': 'sum',
         'Profit': 'sum',
@@ -394,12 +350,16 @@ def get_analyse_clients(
         "segments": segments.to_dict('records')
     }
 
+
+# ============================================================================
+# ENDPOINTS - FILTRES & DONNÉES
+# ============================================================================
+
 @app.get("/filters/valeurs", tags=["Filtres"])
 def get_valeurs_filtres():
     """
     🎯 VALEURS POUR LES FILTRES
-    
-    Retourne toutes les valeurs uniques disponibles pour les filtres
+    Retourne toutes les valeurs disponibles pour les filtres du dashboard
     """
     return {
         "categories": sorted(df['Category'].unique().tolist()),
@@ -412,6 +372,7 @@ def get_valeurs_filtres():
         }
     }
 
+
 @app.get("/data/commandes", tags=["Données brutes"])
 def get_commandes(
     limite: int = Query(100, ge=1, le=1000),
@@ -419,25 +380,24 @@ def get_commandes(
 ):
     """
     📋 DONNÉES BRUTES
-    
-    Retourne les commandes brutes avec pagination
+    Retourne les commandes avec pagination
     """
     total = len(df)
-    commandes = df.iloc[offset:offset+limite]
+    commandes = df.iloc[offset:offset+limite].copy()
     
-    # Conversion des dates en string pour JSON
-    commandes_dict = commandes.copy()
-    commandes_dict['Order Date'] = commandes_dict['Order Date'].dt.strftime('%Y-%m-%d')
-    commandes_dict['Ship Date'] = commandes_dict['Ship Date'].dt.strftime('%Y-%m-%d')
+    commandes['Order Date'] = commandes['Order Date'].dt.strftime('%Y-%m-%d')
+    commandes['Ship Date'] = commandes['Ship Date'].dt.strftime('%Y-%m-%d')
     
     return {
         "total": total,
         "limite": limite,
         "offset": offset,
-        "data": commandes_dict.to_dict('records')
+        "data": commandes.to_dict('records')
     }
 
-# === DÉMARRAGE DU SERVEUR ===
+# ============================================================================
+# DÉMARRAGE SERVEUR
+# ============================================================================
 
 if __name__ == "__main__":
     import uvicorn
