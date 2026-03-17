@@ -9,6 +9,7 @@ from api import appeler_api
 from kpi_section import show_kpis
 from charts_section import show_charts
 from clients_section import show_clients
+from commercial_section import show_commercial_view
 import streamlit as st
 
 
@@ -26,9 +27,15 @@ def main():
 
     params = build_sidebar()
 
-    show_kpis(params)
-    show_charts(params)
-    show_clients()
+    tab1, tab2 = st.tabs(["Vue standard", "Vue commerciale (atelier)"])
+
+    with tab1:
+        show_kpis(params)
+        show_charts(params)
+        show_clients(params)
+
+    with tab2:
+        show_commercial_view(params)
 
 
 if __name__ == "__main__":

@@ -6,9 +6,10 @@ from api import appeler_api
 from formatters import formater_nombre
 
 
-def show_clients():
+def show_clients(params_filtres):
     st.header("👥 Analyse Clients")
-    clients_data = appeler_api("/kpi/clients", params={'limite': 10})
+    clients_params = {**params_filtres, 'limite': 10}
+    clients_data = appeler_api("/kpi/clients", params=clients_params)
     col_client1, col_client2 = st.columns([2, 1])
     with col_client1:
         st.subheader("🏆 Top 10 Clients")

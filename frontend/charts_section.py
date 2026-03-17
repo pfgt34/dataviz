@@ -18,7 +18,12 @@ def show_charts(params_filtres):
             critere_tri = st.radio("Trier par", options=['ca', 'profit', 'quantite'], format_func=lambda x: {'ca': '💰 CA', 'profit': '💵 Profit', 'quantite': '📦 Quantité'}[x], horizontal=True)
         with col_limite:
             nb_produits = st.number_input("Afficher", min_value=5, max_value=50, value=10, step=5)
-        top_produits = appeler_api("/kpi/produits/top", params={'limite': nb_produits, 'tri_par': critere_tri})
+        produits_params = {
+            **params_filtres,
+            'limite': nb_produits,
+            'tri_par': critere_tri,
+        }
+        top_produits = appeler_api("/kpi/produits/top", params=produits_params)
         df_produits = pd.DataFrame(top_produits)
         fig_produits = px.bar(df_produits, x=critere_tri, y='produit', color='categorie', orientation='h', height=500)
         fig_produits.update_layout(yaxis={'categoryorder':'total ascending'})
@@ -26,7 +31,7 @@ def show_charts(params_filtres):
 
     with tab2:
         st.subheader("Performance par Catégorie")
-        categories = appeler_api("/kpi/categories")
+        categories = appeler_api("/kpi/categories", params=params_filtres)
         df_cat = pd.DataFrame(categories)
         col_left, col_right = st.columns(2)
         with col_left:
@@ -41,7 +46,8 @@ def show_charts(params_filtres):
     with tab3:
         st.subheader("Évolution Temporelle")
         granularite = st.radio("Période d'analyse", options=['jour','mois','annee'], format_func=lambda x: {'jour':'📅 Par jour','mois':'📊 Par mois','annee':'📈 Par année'}[x], horizontal=True)
-        temporal = appeler_api("/kpi/temporel", params={'periode': granularite})
+        temporal_params = {**params_filtres, 'periode': granularite}
+        temporal = appeler_api("/kpi/temporel", params=temporal_params)
         df_temporal = pd.DataFrame(temporal)
         fig_temporal = make_subplots(rows=2, cols=1, subplot_titles=("Évolution du CA et Profit","Évolution du Nombre de Commandes"))
         fig_temporal.add_trace(go.Scatter(x=df_temporal['periode'], y=df_temporal['ca'], mode='lines+markers', name='CA', fill='tozeroy'), row=1, col=1)
@@ -51,7 +57,7 @@ def show_charts(params_filtres):
 
     with tab4:
         st.subheader("Performance Géographique")
-        geo = appeler_api("/kpi/geographique")
+        geo = appeler_api("/kpi/geographique", params=params_filtres)
         df_geo = pd.DataFrame(geo)
         fig_geo_ca = px.bar(df_geo, x='region', y='ca', color='ca', color_continuous_scale='Blues')
         st.plotly_chart(fig_geo_ca, use_container_width=True)
