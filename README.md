@@ -13,6 +13,38 @@ Ce projet permet d'apprendre :
 
 ---
 
+## 🧩 User Stories
+
+### 🧑‍💼 User Story - Commercial
+**Storytelling** :
+Chaque lundi matin, Léa (commerciale B2B) prépare sa semaine. Elle dispose d'une liste de comptes clients, mais manque de visibilité sur les segments vraiment rentables. Elle ne veut plus passer des heures dans des exports Excel pour décider qui appeler en priorité.
+
+**User Story** :
+En tant que **commerciale**, je veux **visualiser en quelques secondes les clients, produits et régions les plus rentables sur une période donnée**, afin de **prioriser mes actions, concentrer mes rendez-vous à forte valeur et améliorer mon chiffre d'affaires mensuel**.
+
+**Critères d'acceptation** :
+- Je peux filtrer par période, région et catégorie produit.
+- Je vois le top clients par CA et par profit.
+- Je peux repérer les produits à forte marge et ceux à faible rentabilité.
+- Je peux comparer rapidement les performances d'une période à l'autre.
+- En moins de 2 minutes, je peux établir un plan d'action commercial hebdomadaire.
+
+### 👥 User Story - Clients
+**Storytelling** :
+Karim, responsable relation client, observe une hausse du nombre de commandes mais un engagement irrégulier. Certains clients reviennent souvent, d'autres disparaissent après un premier achat. Son enjeu est de personnaliser les campagnes sans attendre la fin du trimestre.
+
+**User Story** :
+En tant que **responsable relation client**, je veux **identifier les nouveaux clients, les clients récurrents et leur fréquence d'achat**, afin de **déclencher des actions de fidélisation, prévenir l'attrition et augmenter la valeur vie client**.
+
+**Critères d'acceptation** :
+- Je distingue clairement nouveaux clients et clients récurrents.
+- Je visualise la fréquence d'achat par segment.
+- Je repère les clients à fort potentiel et les clients inactifs.
+- Je peux isoler une région ou un segment pour préparer une campagne ciblée.
+- Je dispose d'indicateurs exploitables pour lancer des actions CRM sans analyse manuelle complémentaire.
+
+---
+
 ## 📊 KPI implémentés
 
 ### 🔹 KPI Globaux
